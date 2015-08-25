@@ -1,6 +1,5 @@
-
-#include <stdlib.h>
 #include "shadow_bind_python.h"
+#include <stdlib.h>
 #include <float.h>
 #include <math.h>
 #include <emmintrin.h>
@@ -469,8 +468,8 @@ static int OE_set_##name(Shadow_OE* self, PyObject* value, void* closure) \
 static PyMemberDef OE_members[] = {
 #define EXPAND_OE_SCALAR(ctype,ftype,fkind,pytype,name,cformat,fformat,defvalue) {#name,pytype,offsetof(Shadow_OE,pl.name),0,#name},
 #define EXPAND_OE_STRING(ctype,ftype,fkind,pytype,name,cformat,fformat,length,defvalue)
-#define EXPAND_OE_ARRAYS(ctype,ftype,fkind,pytype,name,cformat,fformat,arrdim,defvalue) 
-#define EXPAND_OE_ARRSTR(ctype,ftype,fkind,pytype,name,cformat,fformat,arrdim,length,defvalue) 
+#define EXPAND_OE_ARRAYS(ctype,ftype,fkind,pytype,name,cformat,fformat,arrdim,defvalue)
+#define EXPAND_OE_ARRSTR(ctype,ftype,fkind,pytype,name,cformat,fformat,arrdim,length,defvalue)
 #include "shadow_oe.def"
   {NULL}                                             /* Sentinel          */
 };
@@ -644,9 +643,9 @@ static PyObject* beam_SetRayZeros(Shadow_Beam* self, PyObject* args)
 {
   npy_int NRays;
   npy_intp dims[2];
-  if(!PyArg_ParseTuple ( args, "i", &NRays )) { 
-    printf("rays not initialized\n"); 
-    Py_RETURN_NONE; 
+  if(!PyArg_ParseTuple ( args, "i", &NRays )) {
+    printf("rays not initialized\n");
+    Py_RETURN_NONE;
   }
   dims[0] = NRays;
   dims[1] = 18;
@@ -691,9 +690,9 @@ static PyObject* Beam_genSource ( Shadow_Beam* self, PyObject* args )
     return NULL;
   }
 
-  strides[0] = 18*sizeof ( double ); 
+  strides[0] = 18*sizeof ( double );
   strides[1] = sizeof( double );
-  dims[0] = pySrc->pl.NPOINT; 
+  dims[0] = pySrc->pl.NPOINT;
   dims[1] = 18;
 
   if ( self->rays!=NULL )
@@ -881,8 +880,8 @@ static npy_int BinarySearch(npy_double x, npy_double *wl, npy_int n){
 
   while (high - low > 1) {
     k = (low + high) / 2;
-    if (x < wl[k]) { high = k; } 
-    else if (x > wl[k+1]) { low = k; } 
+    if (x < wl[k]) { high = k; }
+    else if (x > wl[k+1]) { low = k; }
     else {
       high = k;
       low = k;
@@ -892,7 +891,7 @@ static npy_int BinarySearch(npy_double x, npy_double *wl, npy_int n){
 }
 
 
-static void Rotate(npy_double *ux, npy_double *uy, npy_double *uz, const npy_double vx, const npy_double vy, const npy_double vz) { 
+static void Rotate(npy_double *ux, npy_double *uy, npy_double *uz, const npy_double vx, const npy_double vy, const npy_double vz) {
   npy_double sinT, IsinT, cosT, I_cosT, nx, nz;
   npy_double Rxx, Rxy, Rxz, Ryx, Ryy, Ryz, Rzx, Rzy, Rzz;
   npy_double tmpx, tmpy, tmpz;
@@ -921,10 +920,10 @@ static void Rotate(npy_double *ux, npy_double *uy, npy_double *uz, const npy_dou
   tmpx = Rxx*(*ux) + Rxy*(*uy) + Rxz*(*uz);
   tmpy = Ryx*(*ux) + Ryy*(*uy) + Ryz*(*uz);
   tmpz = Rzx*(*ux) + Rzy*(*uy) + Rzz*(*uz);
-  
+
   *ux = tmpx;
   *uy = tmpy;
-  *uz = tmpz; 
+  *uz = tmpz;
 }
 
 
@@ -955,17 +954,17 @@ static PyObject* FastCDFfromZeroIndex(PyObject *self, PyObject *args){
   PyArrayObject *arry, *x;
   PyObject *arrR;
   npy_intp *ydims, *xdims;
-  npy_int size, NE; 
+  npy_int size, NE;
   npy_double *dataR;
-/* C internal variables */  
+/* C internal variables */
   int i;
   npy_int    x_in;
   npy_double x_lo, x_up, y_lo, *tmpx, *tmpR;
-  if (!PyArg_ParseTuple(args, "O!O!", &PyArray_Type, &arry, 
+  if (!PyArg_ParseTuple(args, "O!O!", &PyArray_Type, &arry,
                                       &PyArray_Type, &x)) return NULL;
 /* set up dimensions  */
   xdims = PyArray_DIMS(x);
-  ydims = PyArray_DIMS(arry); 
+  ydims = PyArray_DIMS(arry);
   size  = xdims[0];
   NE    = ydims[0];
 /* set up pointers    */
@@ -992,25 +991,25 @@ static PyObject* FastCDFfromOneIndex(PyObject *self, PyObject *args){
   PyArrayObject *arry, *index, *x;
   PyObject *arrR;
   npy_intp *ydims, *xdims;
-  npy_int size, NY; 
+  npy_int size, NY;
   npy_double *dataR;
-/* C internal variables */  
+/* C internal variables */
   int i;
   npy_int    x_in, indx;
-  npy_double x_lo, x_up, y_lo, *tmpx, *tmpF, *tmpR; 
+  npy_double x_lo, x_up, y_lo, *tmpx, *tmpF, *tmpR;
   npy_double tmp1, tmp2, len1, len2;
-  if (!PyArg_ParseTuple(args, "O!O!O!", &PyArray_Type, &arry, 
-                                        &PyArray_Type, &index, 
+  if (!PyArg_ParseTuple(args, "O!O!O!", &PyArray_Type, &arry,
+                                        &PyArray_Type, &index,
                                         &PyArray_Type, &x)) return NULL;
 /* set up dimensions  */
   xdims = PyArray_DIMS(x);
-  ydims = PyArray_DIMS(arry); 
+  ydims = PyArray_DIMS(arry);
   size  = xdims[0];
   NY    = ydims[1];
 /* set up pointers    */
   dataR = (npy_double*) malloc(size*sizeof(npy_double));
 /* build arrR */
-  arrR  = PyArray_SimpleNewFromData(1, xdims, NPY_FLOAT64, (void*) dataR); 
+  arrR  = PyArray_SimpleNewFromData(1, xdims, NPY_FLOAT64, (void*) dataR);
   PyArray_FLAGS(arrR) |= NPY_OWNDATA;
 /* cycle */
   for(i=0;i<size;i++){
@@ -1053,23 +1052,23 @@ static PyObject* FastCDFfromTwoIndex(PyObject *self, PyObject *args){
   PyArrayObject *arry, *index1, *index2, *x;
   PyObject *arrR;
   npy_intp *ydims, *xdims;
-  npy_int size, NX; 
+  npy_int size, NX;
   npy_double *dataR;
-/* C internal variables */  
+/* C internal variables */
   int i;
   npy_int    x_in, ind1, ind2;
   npy_double x_lo, x_up, y_lo, *tmpx, *tmpF1, *tmpF2, *tmpR;
   npy_double tmp1, tmp2, tmp3, tmp4, len1, len2, len3, len4;
-  if (!PyArg_ParseTuple(args, "O!O!O!O!", &PyArray_Type, &arry, 
+  if (!PyArg_ParseTuple(args, "O!O!O!O!", &PyArray_Type, &arry,
                                           &PyArray_Type, &index1,
                                           &PyArray_Type, &index2,
                                           &PyArray_Type, &x)) return NULL;
 /* set up dimensions  */
   xdims = PyArray_DIMS(x);
-  ydims = PyArray_DIMS(arry); 
+  ydims = PyArray_DIMS(arry);
   size  = xdims[0];
   NX    = ydims[2];
-  
+
 /* set up pointers    */
   dataR = (npy_double*) malloc(size*sizeof(npy_double));
 /* build arrR */
@@ -1086,7 +1085,7 @@ static PyObject* FastCDFfromTwoIndex(PyObject *self, PyObject *args){
     DOUBLE_TO_INT(*tmpF2, ind2);
 
     x_in  = BinarySearch(*tmpx,(npy_double*) PyArray_GETPTR3(arry,ind1,ind2,0),NX);
-    x_lo  = *((npy_double*) PyArray_GETPTR3(arry,ind1,ind2,x_in));    
+    x_lo  = *((npy_double*) PyArray_GETPTR3(arry,ind1,ind2,x_in));
     x_up  = *((npy_double*) PyArray_GETPTR3(arry,ind1,ind2,x_in+1));
     y_lo  = (npy_double) x_in;
     tmp1  = y_lo + (*tmpx - x_lo) / (x_up - x_lo);
@@ -1101,13 +1100,13 @@ static PyObject* FastCDFfromTwoIndex(PyObject *self, PyObject *args){
     x_lo  = *((npy_double*) PyArray_GETPTR3(arry,ind1+1,ind2,x_in));
     x_up  = *((npy_double*) PyArray_GETPTR3(arry,ind1+1,ind2,x_in+1));
     y_lo  = (npy_double) x_in;
-    tmp3  = y_lo + (*tmpx - x_lo) / (x_up - x_lo);    
+    tmp3  = y_lo + (*tmpx - x_lo) / (x_up - x_lo);
 
     x_in  = BinarySearch(*tmpx,(npy_double*) PyArray_GETPTR3(arry,ind1+1,ind2+1,0),NX);
     x_lo  = *((npy_double*) PyArray_GETPTR3(arry,ind1+1,ind2+1,x_in));
     x_up  = *((npy_double*) PyArray_GETPTR3(arry,ind1+1,ind2+1,x_in+1));
     y_lo  = (npy_double) x_in;
-    tmp4  = y_lo + (*tmpx - x_lo) / (x_up - x_lo);    
+    tmp4  = y_lo + (*tmpx - x_lo) / (x_up - x_lo);
 
     len1  = (*tmpF1) - (npy_double) ind1;
     len2  = (*tmpF2) - (npy_double) ind2;

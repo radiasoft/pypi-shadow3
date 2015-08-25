@@ -1,0 +1,5 @@
+include *.txt
+recursive-include c *
+recursive-include def *
+recursive-include fortran *
+recursive-include examples *
