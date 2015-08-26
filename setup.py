@@ -17,6 +17,8 @@ import setuptools
 import setuptools.command.test
 import numpy
 
+FORTRAN_LIB = 'shadow3c'
+
 def main():
     setuptools.setup(
         name='Shadow',
@@ -26,7 +28,7 @@ def main():
         test_suite='tests',
         tests_require=['pytest'],
         libraries=[
-            ('shadow3c', {
+            (FORTRAN_LIB, {
                 'sources': ['c/shadow_bind_c.c'],
             }),
         ],
@@ -43,16 +45,15 @@ def main():
                 sources=['c/shadow_bind_python.c'],
                 include_dirs=['c', 'def', numpy.get_include()],
                 libraries=['gfortran'],
-                extra_compile_args=['-msse','-msse2'],
-                extra_link_args=['-msse','-msse2'],
             ),
         ],
     )
 
 
-class BuildFortranLib(build_clib):
+class BuildFortranLib(build_clib, object):
 
-    def build_libraries(self, *args, **kwargs):
+    def build_libraries(self, libraries, *args, **kwargs):
+        libraries = [x for x in libraries if x[0] != FORTRAN_LIB]
         tmp_dir = self._libshadow3c_tmp_dir()
         self._libshadow3c_version_h(tmp_dir)
         obj = []
@@ -74,9 +75,9 @@ class BuildFortranLib(build_clib):
             'shadow_bind_f.F90',
             'shadow_crl.F90',
             ):
+            self.distribution.announce('compiling {}'.format(src))
             o = os.path.join(tmp_dir, os.path.splitext(src)[0]) + '.o'
             obj.append(o)
-            print(o)
             subprocess.check_call([
                 'gfortran',
                 '-cpp',
@@ -95,39 +96,24 @@ class BuildFortranLib(build_clib):
                 os.path.join('fortran', src),
             ])
         base = 'shadow_bind_c'
-        o = os.path.join(tmp_dir, base + '.o')
-        obj.append(o)
-        subprocess.check_call([
-            'gcc',
-            '-fPIC',
-            '-Ic',
-            '-Idef',
-            '-c',
-            '-o',
-            o,
-            os.path.join('c', base + '.c'),
-        ])
-        #obj.append(o)
-            # Now "link" the object files together into a static library.
-            # (On Unix at least, this isn't really linking -- it just
-            # builds an archive.  Whatever.)
-        """
-            self.compiler.create_static_lib(objects, lib_name,
-                                            output_dir=self.build_clib,
-                                            debug=self.debug)
-
-        """
-        tgt = os.path.join(tmp_dir, 'libshadow3c.a')
-        cmd = [
-            'ar',
-            'cr',
-            tgt,
-        ]
-        cmd.extend(obj)
-        print(obj)
-        subprocess.check_call(cmd)
-	# $(bFC) $(LIBFLAGS) $(CFLAGS) -o libshadow3$(SO) $(OBJFMODULES)
-        #ext.library_dirs.append(tmp_dir)
+        c = os.path.join('c', base + '.c')
+        self.distribution.announce('compiling {}'.format(c))
+        objects = self.compiler.compile(
+            [c],
+            output_dir=self.build_temp,
+            macros=[('_COMPILE4NIX',)],
+            include_dirs=['c', 'def'],
+            debug=self.debug)
+        obj.extend(objects)
+        self.distribution.announce('linking {}'.format(FORTRAN_LIB))
+        self.compiler.create_static_lib(
+            obj,
+            FORTRAN_LIB,
+            output_dir=self.build_clib,
+            debug=self.debug,
+        )
+        # Build the rest of the libraries (for completeness)
+        return super(BuildFortranLib, self).build_libraries(libraries, *args, **kwargs)
 
     def _libshadow3c_version_h(self, tmp_dir):
         t = '''{hline}
