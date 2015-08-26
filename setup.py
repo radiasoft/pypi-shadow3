@@ -9,10 +9,12 @@ import os
 import os.path
 import platform
 import subprocess
+import sys
 
-from distutils.command.build_ext import build_ext
+from distutils.command.build_clib import build_clib
 import pip
 import setuptools
+import setuptools.command.test
 import numpy
 
 def main():
@@ -21,18 +23,26 @@ def main():
         version='0.1.0',
         packages=['Shadow'],
         package_dir={'Shadow':'Shadow'},
+        test_suite='tests',
+        tests_require=['pytest'],
+        libraries=[
+            ('shadow3c', {
+                'sources': ['c/shadow_bind_c.c'],
+            }),
+        ],
         description='SHADOW is an open source ray tracing code for modeling optical systems.',
         long_description=_read('README.txt'),
         install_requires=_install_requires(),
         cmdclass={
-            'build_ext': BuildExt,
+            'build_clib': BuildFortranLib,
+            'test': PyTest,
         },
         ext_modules=[
             setuptools.Extension(
                 name='Shadow.ShadowLib',
                 sources=['c/shadow_bind_python.c'],
                 include_dirs=['c', 'def', numpy.get_include()],
-                libraries=['gfortran', 'shadow3c'],
+                libraries=['gfortran'],
                 extra_compile_args=['-msse','-msse2'],
                 extra_link_args=['-msse','-msse2'],
             ),
@@ -40,27 +50,9 @@ def main():
     )
 
 
-def _read(filename):
-    with open(filename, 'r') as f:
-        return f.read()
+class BuildFortranLib(build_clib):
 
-
-
-def _install_requires():
-    reqs = pip.req.parse_requirements(
-        'requirements.txt', session=pip.download.PipSession())
-    return [str(i.req) for i in reqs]
-
-
-class BuildExt(build_ext):
-    def build_extension(self, ext, *args, **kwargs):
-        self._libshadow3c(ext)
-        return build_ext.build_extension(self, ext, *args, **kwargs)
-
-    def _libshadow3c(self, ext):
-        if hasattr(self, '_libshadow3c_sentinel'):
-            return
-        self._libshadow3c_sentinel = True
+    def build_libraries(self, *args, **kwargs):
         tmp_dir = self._libshadow3c_tmp_dir()
         self._libshadow3c_version_h(tmp_dir)
         obj = []
@@ -91,20 +83,20 @@ class BuildExt(build_ext):
                 '-fPIC',
                 '-ffree-line-length-none',
                 '-O2',
-                '-fomit-frame-pointer',
-                # Don't hardwire
-                '-D_COMPILE4NIX',
                 '-Ifortran',
-                '-J' + tmp_dir,
                 '-Idef',
                 '-c',
-                # Don't hardwire extension
+                '-fomit-frame-pointer',
+                '-J' + tmp_dir,
+                '-D_COMPILE4NIX',
                 '-o',
+                # Don't hardwire extension
                 o,
                 os.path.join('fortran', src),
             ])
         base = 'shadow_bind_c'
         o = os.path.join(tmp_dir, base + '.o')
+        obj.append(o)
         subprocess.check_call([
             'gcc',
             '-fPIC',
@@ -115,7 +107,16 @@ class BuildExt(build_ext):
             o,
             os.path.join('c', base + '.c'),
         ])
-        obj.append(o)
+        #obj.append(o)
+            # Now "link" the object files together into a static library.
+            # (On Unix at least, this isn't really linking -- it just
+            # builds an archive.  Whatever.)
+        """
+            self.compiler.create_static_lib(objects, lib_name,
+                                            output_dir=self.build_clib,
+                                            debug=self.debug)
+
+        """
         tgt = os.path.join(tmp_dir, 'libshadow3c.a')
         cmd = [
             'ar',
@@ -123,10 +124,10 @@ class BuildExt(build_ext):
             tgt,
         ]
         cmd.extend(obj)
-        print(tgt)
+        print(obj)
         subprocess.check_call(cmd)
 	# $(bFC) $(LIBFLAGS) $(CFLAGS) -o libshadow3$(SO) $(OBJFMODULES)
-        ext.library_dirs.append(tmp_dir)
+        #ext.library_dirs.append(tmp_dir)
 
     def _libshadow3c_version_h(self, tmp_dir):
         t = '''{hline}
@@ -168,12 +169,39 @@ class BuildExt(build_ext):
             f.write(''.join(lines))
 
     def _libshadow3c_tmp_dir(self):
-        res = os.path.join(self.build_temp, 'c')
+        res = self.build_clib
         try:
             os.makedirs(res)
         except OSError:
             pass
         return res
+
+
+class PyTest(setuptools.command.test.test, object):
+    """Proper initialization of `pytest` for ``python setup.py test``"""
+
+    def finalize_options(self):
+        """Initialize test_args and set test_suite to True"""
+        super(PyTest, self).finalize_options()
+        self.test_args = []
+        self.test_suite = True
+
+    def run_tests(self):
+        """Import `pytest` and calls `main`. Calls `sys.exit` with result"""
+        import pytest
+        err = pytest.main(['tests'])
+        sys.exit(err)
+
+
+def _read(filename):
+    with open(filename, 'r') as f:
+        return f.read()
+
+
+def _install_requires():
+    reqs = pip.req.parse_requirements(
+        'requirements.txt', session=pip.download.PipSession())
+    return [str(i.req) for i in reqs]
 
 
 if '__main__' == __name__:
