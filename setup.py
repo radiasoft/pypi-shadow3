@@ -4,37 +4,65 @@
 #
 from __future__ import division, absolute_import, print_function
 
+import datetime
+import os
 import os.path
-
-import pip
-from distutils.command.build_ext import build_ext
-import setuptools
+import platform
 import subprocess
 
+from distutils.command.build_ext import build_ext
+import pip
+import setuptools
 import numpy
+
+def main():
+    setuptools.setup(
+        name='Shadow',
+        version='0.1.0',
+        packages=['Shadow'],
+        package_dir={'Shadow':'Shadow'},
+        description='SHADOW is an open source ray tracing code for modeling optical systems.',
+        long_description=_read('README.txt'),
+        install_requires=_install_requires(),
+        cmdclass={
+            'build_ext': BuildExt,
+        },
+        ext_modules=[
+            setuptools.Extension(
+                name='Shadow.ShadowLib',
+                sources=['c/shadow_bind_python.c'],
+                include_dirs=['c', 'def', numpy.get_include()],
+                libraries=['gfortran', 'shadow3c'],
+                extra_compile_args=['-msse','-msse2'],
+                extra_link_args=['-msse','-msse2'],
+            ),
+        ],
+    )
+
 
 def _read(filename):
     with open(filename, 'r') as f:
         return f.read()
+
+
 
 def _install_requires():
     reqs = pip.req.parse_requirements(
         'requirements.txt', session=pip.download.PipSession())
     return [str(i.req) for i in reqs]
 
-#FC = gfortran
-#FFLAGS = -cpp -fPIC -ffree-line-length-none $(32BITS) $(STATIC) -O2 -fomit-frame-pointer $(COMPILEOPT)
-#LINKFLAGS = $(32BITS) $(STATIC)
 
 class BuildExt(build_ext):
     def build_extension(self, ext, *args, **kwargs):
-        subprocess.check_call(['touch', 'fortran/shadow_version.h'])
-        import os
-        tmp_dir = os.path.join(self.build_temp, 'c')
-        try:
-            os.makedirs(tmp_dir)
-        except OSError:
-            pass
+        self._libshadow3c(ext)
+        return build_ext.build_extension(self, ext, *args, **kwargs)
+
+    def _libshadow3c(self, ext):
+        if hasattr(self, '_libshadow3c_sentinel'):
+            return
+        self._libshadow3c_sentinel = True
+        tmp_dir = self._libshadow3c_tmp_dir()
+        self._libshadow3c_version_h(tmp_dir)
         obj = []
         for src in (
             'shadow_version.F90',
@@ -99,27 +127,54 @@ class BuildExt(build_ext):
         subprocess.check_call(cmd)
 	# $(bFC) $(LIBFLAGS) $(CFLAGS) -o libshadow3$(SO) $(OBJFMODULES)
         ext.library_dirs.append(tmp_dir)
-        return build_ext.build_extension(self, ext, *args, **kwargs)
 
-setuptools.setup(
-    name='Shadow',
-    version='0.1.0',
-    packages=['Shadow'],
-    package_dir={'Shadow':'Shadow'},
-    description='SHADOW is an open source ray tracing code for modeling optical systems.',
-    long_description=_read('README.txt'),
-    install_requires=_install_requires(),
-    cmdclass={
-        'build_ext': BuildExt,
-    },
-    ext_modules=[
-        setuptools.Extension(
-            name='Shadow.ShadowLib',
-            sources=['c/shadow_bind_python.c'],
-            include_dirs=['c', 'def', numpy.get_include()],
-            libraries=['gfortran', 'shadow3c'],
-            extra_compile_args=['-msse','-msse2'],
-            extra_link_args=['-msse','-msse2'],
-        ),
-    ],
-)
+    def _libshadow3c_version_h(self, tmp_dir):
+        t = '''{hline}
+{header:^80}
+{hline}
+
+{prefix}Date:
+{date}
+
+{prefix}Compiler:
+{compiler}
+
+{prefix}Platform:
+{platform}
+
+{prefix}Build:
+{build}
+
+{hline}'''
+        out = t.format(
+            compiler=subprocess.check_output(
+                ['gfortran', '-v'],
+                stderr=subprocess.STDOUT,
+            ),
+            date=datetime.datetime.utcnow().ctime() + ' UTC',
+            header='compilation settings',
+            hline='+' * 80,
+            platform=platform.platform(),
+            prefix=' ' + ('+' * 5),
+            build='N/A',
+        ).rstrip()
+        lines = []
+        for line in out.split('\n'):
+            if not line:
+                line = ' '
+            line = 'print *,"{}"\n'.format(line)
+            lines.append(line)
+        with open(os.path.join(tmp_dir, 'shadow_version.h'), 'w') as f:
+            f.write(''.join(lines))
+
+    def _libshadow3c_tmp_dir(self):
+        res = os.path.join(self.build_temp, 'c')
+        try:
+            os.makedirs(res)
+        except OSError:
+            pass
+        return res
+
+
+if '__main__' == __name__:
+    main()
