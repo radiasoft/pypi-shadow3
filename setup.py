@@ -27,6 +27,9 @@ def main():
         package_dir={'Shadow':'Shadow'},
         test_suite='tests',
         tests_require=['pytest'],
+        url='http://forge.epn-campus.eu/projects/shadow3',
+        author='Manuel Sanchez del Rio',
+        author_email='srio@esrf.eu',
         libraries=[
             ('shadow3c', {
                 'sources': [
