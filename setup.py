@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
-#
-# SHADOW is an open source ray tracing code for modeling optical systems.
-#
+"""Build and install Shadow3"""
 from __future__ import division, absolute_import, print_function
 
-from distutils.cmd import Command
 import datetime
 import glob
 import os
@@ -16,160 +13,120 @@ import setuptools.command.test
 import subprocess
 import sys
 
+import numpy
 from numpy.distutils.command.build_clib import build_clib
 
-
-def main():
-    setuptools.setup(
-        name='Shadow',
-        version='0.1.0',
-        packages=['Shadow'],
-        package_dir={'Shadow':'Shadow'},
-        test_suite='tests',
-        tests_require=['pytest'],
-        url='http://forge.epn-campus.eu/projects/shadow3',
-        author='Manuel Sanchez del Rio',
-        author_email='srio@esrf.eu',
-        libraries=[
-            ('shadow3c', {
-                'sources': [
-                    'c/shadow_bind_c.c',
-                    # The order of these files matters, because fortran
-                    # compilers need the "*.mod" files for "use" statements
-                    'fortran/shadow_version.f90',
-                    'fortran/shadow_globaldefinitions.f90',
-                    'fortran/stringio.f90',
-                    'fortran/gfile.f90',
-                    'fortran/shadow_beamio.f90',
-                    'fortran/shadow_math.f90',
-                    'fortran/shadow_variables.f90',
-                    'fortran/shadow_roughness.f90',
-                    'fortran/shadow_kernel.f90',
-                    'fortran/shadow_synchrotron.f90',
-                    'fortran/shadow_pre_sync.f90',
-                    'fortran/shadow_pre_sync_urgent.f90',
-                    'fortran/shadow_preprocessors.f90',
-                    'fortran/shadow_postprocessors.f90',
-                    'fortran/shadow_bind_f.f90',
-                    'fortran/shadow_crl.f90',
-                ],
-                'macros': [('_COMPILE4NIX', 1)],
-                'include_dirs': ['def', 'fortran', 'c'],
-                # Can't use extra_compiler_args, because applied to all
-                # compilers, and some flags are only used
-            }),
-        ],
-        description='SHADOW is an open source ray tracing code for modeling optical systems.',
-        long_description=_read('README.txt'),
-        install_requires=_install_requires(),
-        cmdclass={
-            'build_clib': BuildClib, ### BuildFortranLib,
-            'build_src': NullCommand,
-            'test': PyTest,
-        },
-        ext_modules=[
-            setuptools.Extension(
-                name='Shadow.ShadowLib',
-                sources=['c/shadow_bind_python.c'],
-                include_dirs=['c', 'def'],
-                libraries=['gfortran'],
-            ),
-        ],
-    )
+from pykern import pksetup
 
 
 class BuildClib(build_clib, object):
+    """Set up for shadow3c build"""
 
     def build_libraries(self, *args, **kwargs):
-        self.mkpath(self.build_clib)
-        h = _version_h(self.build_clib)
+        """Modify the f90 compiler flags and build shadow_version.h"""
         f90 = self._f_compiler.compiler_f90
         f90 = [x for x in f90 if x not in ['-Wall', '-fno-second-underscore']]
-        f90.extend(('-cpp', '-ffree-line-length-none', '-fomit-frame-pointer', '-I' + os.path.dirname(h)))
+        f90.extend(('-cpp', '-ffree-line-length-none', '-fomit-frame-pointer', '-I' + self.build_clib))
         self._f_compiler.compiler_f90 = f90
+        self.__version_h()
         return super(BuildClib, self).build_libraries(*args, **kwargs)
 
 
-class NullCommand(Command, object):
+    def __version_h(self):
+        self.mkpath(self.build_clib)
+        t = '''{hline}
+    {header:^80}
+    {hline}
 
-    def initialize_options(*args, **kwargs):
-        pass
+    {prefix}Date:
+    {date}
 
-    def finalize_options(*args, **kwargs):
-        pass
+    {prefix}Compiler:
+    {compiler}
 
-    def run(*args, **kwargs):
-        pass
+    {prefix}Platform:
+    {platform}
+
+    {prefix}Build:
+    {build}
+
+    {hline}'''
+        out = t.format(
+            # We can't show c compiler, because there's no such string
+            # in distutils. msvccompiler, for example, creates the string
+            # in the spawn() call. This tells us enough
+            compiler=self._f_compiler.compiler_f90,
+            date=datetime.datetime.utcnow().ctime() + ' UTC',
+            header='compilation settings',
+            hline='+' * 80,
+            platform=platform.platform(),
+            prefix=' ' + ('+' * 5),
+            build=self.distribution.version,
+        ).rstrip()
+        lines = []
+        for line in out.split('\n'):
+            if not line:
+                line = ' '
+            line = 'print *,"{}"\n'.format(line)
+            lines.append(line)
+        out = os.path.join(self.build_clib, 'shadow_version.h')
+        with open(out, 'w') as f:
+            f.write(''.join(lines))
+        return out
 
 
-class PyTest(setuptools.command.test.test, object):
-    """Proper initialization of `pytest` for ``python setup.py test``"""
-
-    def finalize_options(self):
-        """Initialize test_args and set test_suite to True"""
-        super(PyTest, self).finalize_options()
-        self.test_args = []
-        self.test_suite = True
-
-    def run_tests(self):
-        """Import `pytest` and calls `main`. Calls `sys.exit` with result"""
-        import pytest
-        err = pytest.main(['tests'])
-        sys.exit(err)
-
-
-def _install_requires():
-    reqs = pip.req.parse_requirements(
-        'requirements.txt', session=pip.download.PipSession())
-    return [str(i.req) for i in reqs]
-
-
-def _read(filename):
-    with open(filename, 'r') as f:
-        return f.read()
-
-
-def _version_h(tmp_dir):
-    t = '''{hline}
-{header:^80}
-{hline}
-
-{prefix}Date:
-{date}
-
-{prefix}Compiler:
-{compiler}
-
-{prefix}Platform:
-{platform}
-
-{prefix}Build:
-{build}
-
-{hline}'''
-    out = t.format(
-        compiler=subprocess.check_output(
-            ['gfortran', '-v'],
-            stderr=subprocess.STDOUT,
+pksetup.setup(
+    name='shadow3',
+    version='0.1.0',
+    packages=['Shadow'],
+    url='http://forge.epn-campus.eu/projects/shadow3',
+    license='http://www.gnu.org/licenses/gpl-3.0.html',
+    author='Franco Cerrina, Chris Welnak, G.J. Chen, and M. Sanchez del Rio',
+    author_email='srio@esrf.eu',
+    description='SHADOW is an open source ray tracing code for modeling optical systems.',
+    pksetup={
+        'extra_directories': ['c', 'def', 'fortran', 'examples'],
+    },
+    libraries=[
+        ('shadow3c', {
+            'some-random-param': 1,
+            'sources': [
+                'c/shadow_bind_c.c',
+                # The order of these files matters, because fortran
+                # compilers need the "*.mod" files for "use" statements
+                'fortran/shadow_version.f90',
+                'fortran/shadow_globaldefinitions.f90',
+                'fortran/stringio.f90',
+                'fortran/gfile.f90',
+                'fortran/shadow_beamio.f90',
+                'fortran/shadow_math.f90',
+                'fortran/shadow_variables.f90',
+                'fortran/shadow_roughness.f90',
+                'fortran/shadow_kernel.f90',
+                'fortran/shadow_synchrotron.f90',
+                'fortran/shadow_pre_sync.f90',
+                'fortran/shadow_pre_sync_urgent.f90',
+                'fortran/shadow_preprocessors.f90',
+                'fortran/shadow_postprocessors.f90',
+                'fortran/shadow_bind_f.f90',
+                'fortran/shadow_crl.f90',
+            ],
+            'macros': [('_COMPILE4NIX', 1)],
+            'include_dirs': ['def', 'fortran', 'c'],
+            # Can't use extra_compiler_args, because applied to all
+            # compilers, and some flags are only used. See BuildClib
+        }),
+    ],
+    cmdclass={
+        'build_clib': BuildClib,
+        'build_src': pksetup.NullCommand,
+    },
+    ext_modules=[
+        setuptools.Extension(
+            name='Shadow.ShadowLib',
+            sources=['c/shadow_bind_python.c'],
+            include_dirs=['c', 'def', numpy.get_include()],
+            libraries=['gfortran'],
         ),
-        date=datetime.datetime.utcnow().ctime() + ' UTC',
-        header='compilation settings',
-        hline='+' * 80,
-        platform=platform.platform(),
-        prefix=' ' + ('+' * 5),
-        build='N/A',
-    ).rstrip()
-    lines = []
-    for line in out.split('\n'):
-        if not line:
-            line = ' '
-        line = 'print *,"{}"\n'.format(line)
-        lines.append(line)
-    out = os.path.join(tmp_dir, 'shadow_version.h')
-    with open(out, 'w') as f:
-        f.write(''.join(lines))
-    return out
-
-
-if '__main__' == __name__:
-    main()
+    ],
+)

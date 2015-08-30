@@ -1,4 +1,9 @@
-include *.txt
+# OVERWRITTEN by pykern.pksetup every "python setup.py"
+include LICENSE
+include requirements.txt
+recursive-include docs *
+recursive-include tests *
+include README.rst
 recursive-include c *
 recursive-include def *
 recursive-include fortran *
