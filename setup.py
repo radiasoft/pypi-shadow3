@@ -141,7 +141,10 @@ pksetup.setup(
         setuptools.Extension(
             name='Shadow.ShadowLib',
             sources=['c/shadow_bind_python.c'],
-            include_dirs=['c', 'def', numpy.get_include()],
+            include_dirs=['.','c', 'def', numpy.get_include()],
+            library_dirs=['.'],
+            libraries=['shadow3c'],
         ),
     ],
+    data_files=[('/usr/lib',["libshadow3c.so"])],
 )

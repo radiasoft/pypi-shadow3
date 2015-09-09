@@ -10,9 +10,6 @@ import pytest
 
 def test_1(capsys):
     from sys import stderr
-
-    return
-
     import Shadow
     beam = Shadow.Beam()
     src = Shadow.Source()
