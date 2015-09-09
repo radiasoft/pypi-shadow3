@@ -10,9 +10,7 @@ For more info, see the `README.txt <https://github.com/radiasoft/pypi-shadow3/bl
 Installation
 ------------
 
-You need to install [PyKern](https://github.com/radiasoft/pykern) first.
+You need to install [PyKern](https://github.com/radiasoft/pykern) first::
 
-```sh
-pip install pykern
-pip install -i https://testpypi.python.org/pypi shadow3
-```
+    pip install pykern
+    pip install shadow3
