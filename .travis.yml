@@ -3,6 +3,9 @@ language: python
 branches:
   only:
     - master
+before_install:
+  - pyenv install 2.7.10
+  - pyenv local 2.7.10
 install:
   - pip install -r requirements.txt
   - pip install pykern
