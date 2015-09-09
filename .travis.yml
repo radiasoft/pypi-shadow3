@@ -5,6 +5,5 @@ branches:
     - master
 install:
   - pip install -r requirements.txt
-  - pip install pykern
 script:
   - python setup.py pkdeploy
