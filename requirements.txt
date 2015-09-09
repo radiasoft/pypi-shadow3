@@ -1,6 +1,4 @@
-numpy>=1.7
-pykern>=20150830
-# PyKern requirements. Don't know why they need to be duplicated
+# PyKern requirements, first. Don't know why they need to be duplicated
 argh>=0.26
 future>=0.14
 jinja2>=2.7
@@ -14,3 +12,7 @@ setuptools>=15
 six>=1.9
 sphinx>=1.3.1
 tox>=1.9
+#
+# Actual requirements
+numpy>=1.7
+pykern>=20150830
