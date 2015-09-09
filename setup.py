@@ -26,12 +26,28 @@ class BuildClib(build_clib, object):
         """Modify the f90 compiler flags and build shadow_version.h"""
         f90 = self._f_compiler.compiler_f90
         # Is this portable?
-        f90 = [x for x in f90 if x not in ['-Wall', '-fno-second-underscore']]
+        f90.remove('-Wall')
+        f90.remove('-fno-second-underscore')
         f90.extend(('-cpp', '-ffree-line-length-none', '-fomit-frame-pointer', '-I' + self.build_clib))
-        self._f_compiler.compiler_f90 = f90
         self.__version_h()
-        return super(BuildClib, self).build_libraries(*args, **kwargs)
+        # This is an unfriendly patch: 
+        # Redirect the compiler's create static lib function to create a shared lib. 
+        # Save the function reference. 
+        create_static_lib_func = self.compiler.create_static_lib 
+        # Redirect to decorated create shared library function.
+        self.compiler.create_static_lib = self.__redirect_linking_static_to_shared
+        # Create library.
+        result = super(BuildClib, self).build_libraries(*args, **kwargs)
+        # Restore create static library reference.
+        self.compiler.create_static_lib = create_static_lib_func
 
+        return result
+
+    def __redirect_linking_static_to_shared(self, objects, lib_name, output_dir, debug):
+        return self.compiler.link_shared_lib(objects, lib_name,
+                                             output_dir=output_dir,
+                                             debug=debug,
+                                             libraries=["gfortran"])
 
     def __version_h(self):
         self.mkpath(self.build_clib)
@@ -126,7 +142,6 @@ pksetup.setup(
             name='Shadow.ShadowLib',
             sources=['c/shadow_bind_python.c'],
             include_dirs=['c', 'def', numpy.get_include()],
-            libraries=['gfortran'],
         ),
     ],
 )
