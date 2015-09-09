@@ -45,9 +45,9 @@ class BuildClib(build_clib, object):
 
     def __redirect_linking_static_to_shared(self, objects, lib_name, output_dir, debug):
         return self.compiler.link_shared_lib(objects, lib_name,
-                                             output_dir=output_dir,
+                                             output_dir='',
                                              debug=debug,
-                                             libraries=["gfortran"])
+                                             libraries=['gfortran'])
 
     def __version_h(self):
         self.mkpath(self.build_clib)
