@@ -1,3 +1,6 @@
+Welcome to Shadow
+==================
+
 SHADOW 3.0 Python Library
 =========================
 
@@ -7,12 +10,15 @@ features for designing X-rayoptical systems.
 
 For more info, see the `README.txt <https://github.com/radiasoft/pypi-shadow3/blob/master/docs/README.txt>`_
 
-Installation
-------------
+.. toctree::
+   :maxdepth: 2
 
-You need to install [PyKern](https://github.com/radiasoft/pykern) first.
+   Shadow
+   modules
 
-```sh
-pip install pykern
-pip install -i https://testpypi.python.org/pypi shadow3
-```
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`

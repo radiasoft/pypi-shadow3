@@ -25,6 +25,7 @@ class BuildClib(build_clib, object):
     def build_libraries(self, *args, **kwargs):
         """Modify the f90 compiler flags and build shadow_version.h"""
         f90 = self._f_compiler.compiler_f90
+        # Is this portable?
         f90 = [x for x in f90 if x not in ['-Wall', '-fno-second-underscore']]
         f90.extend(('-cpp', '-ffree-line-length-none', '-fomit-frame-pointer', '-I' + self.build_clib))
         self._f_compiler.compiler_f90 = f90
@@ -77,7 +78,6 @@ class BuildClib(build_clib, object):
 
 pksetup.setup(
     name='shadow3',
-    version='0.1.0',
     packages=['Shadow'],
     url='http://forge.epn-campus.eu/projects/shadow3',
     license='http://www.gnu.org/licenses/gpl-3.0.html',
