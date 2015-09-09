@@ -15,4 +15,4 @@ tox>=1.9
 #
 # Actual requirements
 numpy>=1.7
-pykern>=20150830
+#pykern>=20150830
