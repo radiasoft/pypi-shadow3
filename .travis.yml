@@ -4,7 +4,7 @@ branches:
   only:
     - master
 install:
-  - pip install -U setuptools pip
+  - pip install -U pytest==2.7.2 setuptools=18.3.1 pip==7.1.2
   - pip install -r requirements.txt
 script:
   - python setup.py pkdeploy
