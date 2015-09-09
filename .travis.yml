@@ -1,9 +1,10 @@
 ---
+# This is still broken on Ubuntu 12.04. Need to use a Fedora Docker container
 sudo: required
 language: python
 branches:
   only:
-    - master
+    - stable
 install:
   - sudo apt-get install gfortran
   - pip install -U pytest==2.7.2 setuptools==18.3.1 pip==7.1.2
