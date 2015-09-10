@@ -26,13 +26,12 @@ class BuildClib(build_clib, object):
         """Modify the f90 compiler flags and build shadow_version.h"""
         f90 = self._f_compiler.compiler_f90
         # Is this portable?
-        f90.remove('-Wall')
-        f90.remove('-fno-second-underscore')
+        for f in ('-Wall', '-fno-second-underscore'):
+            if f in f90:
+                f90.remove(f)
         f90.extend(('-cpp', '-ffree-line-length-none', '-fomit-frame-pointer', '-I' + self.build_clib))
         self.__version_h()
-        result = super(BuildClib, self).build_libraries(*args, **kwargs)
-
-        return result
+        return super(BuildClib, self).build_libraries(*args, **kwargs)
 
     def __version_h(self):
         self.mkpath(self.build_clib)
@@ -127,7 +126,7 @@ pksetup.setup(
             name='Shadow.ShadowLib',
             sources=['c/shadow_bind_python.c'],
             include_dirs=['c', 'def', numpy.get_include()],
-            libraries=['shadow3c','gfortran'],
+            libraries=['shadow3c', 'gfortran'],
         ),
     ],
 )
