@@ -22,6 +22,9 @@ from pykern import pksetup
 class BuildClib(build_clib, object):
     """Set up for shadow3c build"""
 
+    def set_undefined_options(*args, **kwargs):
+        pass
+
     def build_libraries(self, *args, **kwargs):
         """Modify the f90 compiler flags and build shadow_version.h"""
         f90 = self._f_compiler.compiler_f90
